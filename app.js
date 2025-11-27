@@ -787,12 +787,23 @@ function updateAllStats() {
         ? Math.round((AppState.correctAnswers / AppState.totalReviews) * 100) 
         : 0;
     
-    // Update display
-    document.getElementById('streakCount').textContent = AppState.streak;
-    document.getElementById('todayWords').textContent = AppState.todayWords;
-    document.getElementById('masteredWords').textContent = mastered;
-    document.getElementById('totalReviews').textContent = AppState.totalReviews;
-    document.getElementById('accuracyRate').textContent = accuracy + '%';
+    // Update display (with null checks)
+    const setTextIfExists = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+    
+    setTextIfExists('streakCount', AppState.streak);
+    setTextIfExists('todayWords', AppState.todayWords);
+    setTextIfExists('masteredWords', mastered);
+    setTextIfExists('totalReviews', AppState.totalReviews);
+    setTextIfExists('accuracyRate', accuracy + '%');
+    
+    // Stats panel elements
+    setTextIfExists('statsStreak', AppState.streak);
+    setTextIfExists('statsTotalReviews', AppState.totalReviews);
+    setTextIfExists('statsAccuracy', accuracy + '%');
+    setTextIfExists('statsMastered', mastered);
     
     // Update daily goal
     updateDailyGoalDisplay();
@@ -807,9 +818,19 @@ function updateAllStats() {
 function updateDailyGoalDisplay() {
     const progress = Math.min(100, Math.round((AppState.todayWords / AppState.dailyGoal) * 100));
     
-    document.getElementById('goalProgress').textContent = `${AppState.todayWords} / ${AppState.dailyGoal}`;
-    document.getElementById('goalPercent').textContent = progress + '%';
-    document.getElementById('goalFill').style.width = progress + '%';
+    const setTextIfExists = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+    
+    const setStyleIfExists = (id, prop, value) => {
+        const el = document.getElementById(id);
+        if (el) el.style[prop] = value;
+    };
+    
+    setTextIfExists('goalProgress', `${AppState.todayWords} / ${AppState.dailyGoal}`);
+    setTextIfExists('goalPercent', progress + '%');
+    setStyleIfExists('goalFill', 'width', progress + '%');
     
     let message = '';
     if (AppState.todayWords === 0) {
@@ -827,7 +848,7 @@ function updateDailyGoalDisplay() {
         }
     }
     
-    document.getElementById('goalMessage').textContent = message;
+    setTextIfExists('goalMessage', message);
 }
 
 function updateDailyGoal() {
@@ -842,7 +863,8 @@ function updateExamCountdown() {
     const diff = EXAM_DATE - now;
     const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
     
-    document.getElementById('daysLeft').textContent = days;
+    const el = document.getElementById('daysLeft');
+    if (el) el.textContent = days;
 }
 
 function updateReadiness() {
@@ -850,8 +872,12 @@ function updateReadiness() {
     const total = AppState.vocabulary.length;
     const readiness = Math.round((mastered / total) * 100);
     
-    document.getElementById('readinessPercent').textContent = readiness + '%';
-    document.getElementById('readinessFill').style.width = readiness + '%';
+    const percentEl = document.getElementById('readinessPercent');
+    const fillEl = document.getElementById('readinessFill');
+    const tipEl = document.getElementById('readinessTip');
+    
+    if (percentEl) percentEl.textContent = readiness + '%';
+    if (fillEl) fillEl.style.width = readiness + '%';
     
     // Calculate words per day needed
     const now = new Date();
@@ -859,8 +885,9 @@ function updateReadiness() {
     const remaining = total - mastered;
     const wordsPerDay = Math.ceil(remaining / daysLeft);
     
-    document.getElementById('readinessTip').textContent = 
-        `Hedefine ulaşmak için günde ${wordsPerDay} kelime öğrenmelisin.`;
+    if (tipEl) {
+        tipEl.textContent = `Hedefine ulaşmak için günde ${wordsPerDay} kelime öğrenmelisin.`;
+    }
 }
 
 function updateDistributionBar() {
@@ -870,22 +897,31 @@ function updateDistributionBar() {
     const total = AppState.vocabulary.length;
     const bar = document.getElementById('distributionBar');
     
-    bar.innerHTML = counts.map((count, level) => {
-        const percent = (count / total) * 100;
-        const color = MASTERY_LEVELS[level].color;
-        return `<div class="dist-segment" style="width: ${percent}%; background: ${color}"></div>`;
-    }).join('');
+    if (bar) {
+        bar.innerHTML = counts.map((count, level) => {
+            const percent = (count / total) * 100;
+            const color = MASTERY_LEVELS[level].color;
+            return `<div class="dist-segment" style="width: ${percent}%; background: ${color}"></div>`;
+        }).join('');
+    }
     
-    // Update legend
-    document.getElementById('distNew').textContent = counts[0];
-    document.getElementById('distSeen').textContent = counts[1];
-    document.getElementById('distLearning').textContent = counts[2];
-    document.getElementById('distFamiliar').textContent = counts[3];
-    document.getElementById('distMastered').textContent = counts[4];
+    // Update legend (with null checks)
+    const setTextIfExists = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+    
+    setTextIfExists('distNew', counts[0]);
+    setTextIfExists('distSeen', counts[1]);
+    setTextIfExists('distLearning', counts[2]);
+    setTextIfExists('distFamiliar', counts[3]);
+    setTextIfExists('distMastered', counts[4]);
 }
 
 function updateHeatmap() {
     const grid = document.getElementById('heatmapGrid');
+    if (!grid) return;
+    
     const now = new Date();
     const days = [];
     
@@ -948,8 +984,12 @@ function updateCityIndicator() {
 
 function updateEncouragement() {
     const msg = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
-    document.getElementById('encouragementIcon').textContent = msg.icon;
-    document.getElementById('encouragementText').textContent = msg.text;
+    
+    const iconEl = document.getElementById('encouragementIcon');
+    const textEl = document.getElementById('encouragementText');
+    
+    if (iconEl) iconEl.textContent = msg.icon;
+    if (textEl) textEl.textContent = msg.text;
 }
 
 function renderCharts() {
@@ -1064,17 +1104,22 @@ function checkAchievements() {
 }
 
 function showAchievement(title, text) {
-    document.getElementById('achievementTitle').textContent = title;
-    document.getElementById('achievementText').textContent = text;
-    
+    const titleEl = document.getElementById('achievementTitle');
+    const textEl = document.getElementById('achievementText');
     const toast = document.getElementById('achievementToast');
-    toast.classList.add('show');
     
-    triggerConfetti();
+    if (titleEl) titleEl.textContent = title;
+    if (textEl) textEl.textContent = text;
     
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 4000);
+    if (toast) {
+        toast.classList.add('show');
+        
+        triggerConfetti();
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 4000);
+    }
 }
 
 function triggerConfetti() {
