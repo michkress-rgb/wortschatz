@@ -74,24 +74,42 @@ const ENCOURAGEMENTS = [
 ];
 
 // Initialize App
+let firebaseRetries = 0;
+const MAX_FIREBASE_RETRIES = 10;
+
 document.addEventListener('DOMContentLoaded', () => {
     initializeFirebase();
 });
 
 function initializeFirebase() {
+    // Check if Firebase is loaded
     if (typeof firebase === 'undefined') {
-        setTimeout(initializeFirebase, 500);
-        return;
+        firebaseRetries++;
+        if (firebaseRetries < MAX_FIREBASE_RETRIES) {
+            console.log('Waiting for Firebase... attempt', firebaseRetries);
+            setTimeout(initializeFirebase, 500);
+            return;
+        } else {
+            // Firebase didn't load - continue without it
+            console.warn('Firebase not available, running in offline mode');
+            initializeApp();
+            return;
+        }
     }
 
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-    
-    // Load user progress from Firebase
-    loadUserProgress(database);
-    
-    // Store database reference globally
-    window.db = database;
+    try {
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
+        // Load user progress from Firebase
+        loadUserProgress(database);
+        
+        // Store database reference globally
+        window.db = database;
+    } catch (error) {
+        console.error('Firebase initialization error:', error);
+        initializeApp(); // Continue without Firebase
+    }
 }
 
 function loadUserProgress(database) {
@@ -134,36 +152,49 @@ function saveUserProgress() {
 }
 
 function initializeApp() {
-    // Load vocabulary
-    AppState.vocabulary = VOCABULARY_DATA.map(word => ({
-        ...word,
-        mastery: AppState.userProgress[word.id]?.mastery || 0,
-        lastReview: AppState.userProgress[word.id]?.lastReview || null,
-        reviewCount: AppState.userProgress[word.id]?.reviewCount || 0
-    }));
-    
-    // Check streak
-    checkStreak();
-    
-    // Calculate today's words
-    calculateTodayWords();
-    
-    // Initialize queue
-    buildStudyQueue();
-    
-    // Setup event listeners
-    setupEventListeners();
-    
-    // Update UI
-    updateAllStats();
-    updateExamCountdown();
-    updateDistributionBar();
-    updateHeatmap();
-    updateEncouragement();
-    showCurrentCard();
-    
-    // Hide loading overlay
-    document.getElementById('loadingOverlay').style.display = 'none';
+    try {
+        // Load vocabulary
+        if (typeof VOCABULARY_DATA === 'undefined') {
+            console.error('VOCABULARY_DATA not loaded!');
+            document.getElementById('loadingOverlay').innerHTML = '<div style="color: red;">Error: Vocabulary data not found</div>';
+            return;
+        }
+        
+        AppState.vocabulary = VOCABULARY_DATA.map(word => ({
+            ...word,
+            mastery: AppState.userProgress[word.id]?.mastery || 0,
+            lastReview: AppState.userProgress[word.id]?.lastReview || null,
+            reviewCount: AppState.userProgress[word.id]?.reviewCount || 0
+        }));
+        
+        // Check streak
+        checkStreak();
+        
+        // Calculate today's words
+        calculateTodayWords();
+        
+        // Initialize queue
+        buildStudyQueue();
+        
+        // Setup event listeners
+        setupEventListeners();
+        
+        // Update UI
+        updateAllStats();
+        updateExamCountdown();
+        updateDistributionBar();
+        updateHeatmap();
+        updateEncouragement();
+        showCurrentCard();
+        
+        // Hide loading overlay
+        document.getElementById('loadingOverlay').style.display = 'none';
+        
+        console.log('App initialized successfully with', AppState.vocabulary.length, 'words');
+    } catch (error) {
+        console.error('Error initializing app:', error);
+        document.getElementById('loadingOverlay').innerHTML = '<div style="color: red;">Error: ' + error.message + '</div>';
+    }
 }
 
 function setupEventListeners() {
@@ -878,6 +909,12 @@ function updateHeatmap() {
 }
 
 function updateCityIndicator() {
+    const cityEl = document.getElementById('currentCityIndicator');
+    const nextEl = document.getElementById('nextMilestone');
+    
+    // Skip if elements don't exist
+    if (!cityEl || !nextEl) return;
+    
     const mastered = AppState.vocabulary.filter(w => w.mastery >= 3).length;
     const total = AppState.vocabulary.length;
     const progress = mastered / total;
@@ -905,8 +942,8 @@ function updateCityIndicator() {
         next = 'Sonraki: Erfurt';
     }
     
-    document.getElementById('currentCityIndicator').textContent = city;
-    document.getElementById('nextMilestone').textContent = next;
+    cityEl.textContent = city;
+    nextEl.textContent = next;
 }
 
 function updateEncouragement() {
